@@ -1,13 +1,14 @@
 import React from "react";
 import { dummyResumeData } from "../assets/assets";
-import { Trash2, Edit, X } from "lucide-react";
+import { Trash2, Edit, X, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
   const [allResumes, setAllResumes] = React.useState([]);
   const [isCreateResume, setIsCreateResume] = React.useState(false);
   const [resumeTitle, setResumeTitle] = React.useState("");
-
+  const [isUploadResume, setIsUploadResume] = React.useState(false);
+  const [uploadedFile, setUploadedFile] = React.useState(null);
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -23,6 +24,13 @@ const Dashboard = () => {
     setResumeTitle("");
     setIsCreateResume(false);
   };
+
+  const handleUploadResume = (e) => {
+    e.preventDefault();
+    navigate("/app/builder/123");
+    setResumeTitle("");
+    setIsUploadResume(false);
+  }
 
   return (
     <div className="min-h-screen bg-[#F3EFE6] px-6 py-10">
@@ -49,7 +57,7 @@ const Dashboard = () => {
         </div>
 
         {/* Upload Resume */}
-        <div className="bg-white rounded-lg border border-black/10 shadow-sm p-6 flex items-start gap-4 cursor-pointer hover:shadow-md transition min-h-[160px]">
+        <div onClick={()=>setIsUploadResume(true)} className="bg-white rounded-lg border border-black/10 shadow-sm p-6 flex items-start gap-4 cursor-pointer hover:shadow-md transition min-h-[160px]">
           <div className="w-12 h-12 rounded-md bg-[#1F3D2B]/10 flex items-center justify-center shrink-0">
             <span className="text-2xl text-[#1F3D2B]">☁</span>
           </div>
@@ -63,8 +71,75 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+    {/* Pop-up upload resume modal */}
 
-      {/* Create Resume Modal */}
+   {isUploadResume && (
+  <div
+    className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+    onClick={() => setIsUploadResume(false)}
+  >
+    <div
+      className="bg-white rounded-xl shadow-lg w-[360px] p-6 relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <X
+        className="absolute top-4 right-4 w-5 h-5 cursor-pointer text-[#1F3D2B]/70 hover:text-[#1F3D2B]"
+        onClick={() => setIsUploadResume(false)}
+      />
+
+      <h3 className="text-lg font-semibold text-[#1F3D2B] mb-4">
+        Upload Resume
+      </h3>
+
+      <form onSubmit={handleUploadResume}>
+        {/* Title */}
+        <input
+          type="text"
+          value={resumeTitle}
+          onChange={(e) => setResumeTitle(e.target.value)}
+          placeholder="Enter resume title"
+          className="w-full border border-black/20 rounded-md px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-[#1F3D2B]/40"
+          required
+        />
+
+        {/* File upload */}
+        <label className="block border-2 border-dashed border-black/20 rounded-md p-4 text-center cursor-pointer hover:bg-[#1F3D2B]/5 transition">
+          <Upload className="w-6 h-6 mx-auto text-[#1F3D2B]/70 mb-2" />
+          <p className="text-sm text-[#1F3D2B]/70">
+            Click to upload (.pdf, .doc, .docx)
+          </p>
+
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => setUploadedFile(e.target.files[0])}
+          />
+        </label>
+
+        {/* File name */}
+        {uploadedFile && (
+          <p className="text-sm text-green-600 mt-2">
+            File selected: {uploadedFile.name}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={!uploadedFile}
+          className="w-full mt-4 bg-[#1F3D2B] text-white py-2 rounded-md hover:bg-[#173022] transition disabled:opacity-50"
+        >
+          Upload Resume
+        </button>
+      </form>
+    </div>
+  </div>
+)}
+
+
+
+
+      {/* Pop-up Create Resume Modal */}
       {isCreateResume && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
