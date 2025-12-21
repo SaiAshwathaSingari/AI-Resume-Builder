@@ -49,9 +49,9 @@ export default function Hero() {
             </svg>
           </button>
 
-          <a className="hidden md:flex bg-indigo-600 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-indigo-700 transition">
+          <Link to='/login' className="hidden md:flex bg-indigo-600 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-indigo-700 transition">
             Sign up
-          </a>
+          </Link>
 
           <button
             onClick={() => setMenuOpen(true)}
