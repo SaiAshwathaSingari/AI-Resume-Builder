@@ -265,7 +265,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {allResumes.map((resume, index) => (
               <div
-                onClick={() => navigate(`/app/builder/${resume.id}`)}
+                onClick={() => navigate(`/app/builder/${resume._id}`)}
                 key={index}
                 className="bg-white rounded-lg border border-black/10 shadow-sm p-5 hover:shadow-md transition"
               >
