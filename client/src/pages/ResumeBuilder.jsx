@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   ChevronDown,
   Settings2,
+  EyeIcon,
 } from "lucide-react";
 
 import PersonalInfoForm from "../components/PersonalInfoForm";
@@ -22,6 +23,8 @@ import ExperienceForm from "../components/ExperienceForm";
 import TemplateSelector from "../components/TemplateSelector";
 import AccentSelector from "../components/AccentSelector";
 import EducatioinForm from "../components/EducatioinForm";
+import ProjectForm from "../components/ProjectForm";
+import SkillsForm from "../components/SkillsForm";
 
 const ResumeBuilder = () => {
   const { resumeId } = useParams();
@@ -52,13 +55,40 @@ const ResumeBuilder = () => {
     if (resume) setResumeData((prev) => ({ ...prev, ...resume }));
   }, [resumeId]);
 
+  const handlePublicToggle = ()=>{
+    setResumeData((prev)=>(
+      {
+        ...prev,
+        public: !prev.public
+      }
+    ))
+  }
+
   const renderActiveForm = () => {
     const active = sections[activeSectionIndex].id;
     if (active === "personal") return <PersonalInfoForm data={resumeData.personal_info} onChange={(newData) => setResumeData(p => ({ ...p, personal_info: newData }))} />;
     if (active === "summary") return <SummaryForm data={resumeData.professional_summary} onChange={(newData) => setResumeData(p => ({ ...p, professional_summary: newData }))} />;
     if (active === "experience") return <ExperienceForm data={resumeData.experience} onChange={(newData) => setResumeData(p => ({ ...p, experience: newData }))} />;
     if (active === "education") return <EducatioinForm data={resumeData.education} onChange={(newData) => setResumeData(p => ({ ...p, education: newData }))} />;
-
+    if (active === "projects") return <ProjectForm 
+      data={resumeData.project}
+      onChange={(newData)=>{
+        setResumeData((prev)=>({
+          ...prev,
+          project:newData
+        }))
+      }}
+    />
+    if(active==="skills") 
+      return <SkillsForm
+      data={resumeData.skills}
+      onChange={(newData)=>{
+        setResumeData((prev)=>({
+          ...prev,
+          skills: newData
+        }))
+      }}
+    />
     return (
       <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-black/10 rounded-2xl bg-black/[0.02]">
         <p className="text-sm font-medium text-[#1F3D2B]/40 italic">{sections[activeSectionIndex].name} coming soon</p>
@@ -143,6 +173,15 @@ const ResumeBuilder = () => {
         </section>
 
         {/* --- PREVIEW SECTION --- */}
+        <button>
+          {
+            resumeData.public ?(
+              <div>Public <EyeIcon /></div>
+            ):(
+              <div>Private</div>
+            )
+          }
+        </button>
         <section className="shrink-0 flex justify-center lg:justify-end animate-in fade-in slide-in-from-right-8 duration-700">
           <div className="sticky top-32">
             <div className="relative">
