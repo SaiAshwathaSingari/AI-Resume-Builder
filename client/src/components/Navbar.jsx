@@ -1,12 +1,17 @@
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { logout } from "../redux/features/authSlice.js";
 
 function Navbar() {
-  const user = { name: "John Doe" };
+  const user1 = useSelector(state => state.auth);
+  const user = { name: user1.user.name };
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const logout = () => {
-    navigate("/login");
+  const logoutUser = () => {
+    dispatch(logout());
+    navigate("/");
   };
 
   return (
@@ -15,7 +20,7 @@ function Navbar() {
       {/* --- LEFT: BIG POSH LOGO --- */}
       <div 
         className="flex flex-col cursor-pointer group select-none" 
-        onClick={() => navigate("/app")}
+        onClick={() => navigate("/")}
       >
         <div className="flex items-baseline">
           {/* The Large Serif 'C' */}
@@ -59,7 +64,7 @@ function Navbar() {
               {user.name}
             </span>
             <button
-              onClick={logout}
+              onClick={logoutUser}
               className="text-[10px] font-bold text-red-600/60 hover:text-red-600 transition-colors uppercase tracking-widest mt-1"
             >
               Log Out

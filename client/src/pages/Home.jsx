@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles, ShieldCheck, Zap, MousePointerClick } from 'lucide-react';
+import { useSelector } from 'react-redux';
 
 const Home = () => {
   const navigate = useNavigate();
-
+  const {user} = useSelector(state=>state.auth);
   return (
     <div className="min-h-screen bg-[#F3EFE6] text-[#1F3D2B] selection:bg-[#1F3D2B] selection:text-white">
       
@@ -44,10 +45,12 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-8"
+          hidden={user}
+        >
           <button onClick={() => navigate('/login')} className="text-[11px] font-black uppercase tracking-[0.2em] hover:opacity-60 transition">Login</button>
           <button 
-            onClick={() => navigate('/app')}
+            onClick={() => navigate(user ? '/app':'/login')}
             className="px-10 py-4 bg-[#1F3D2B] text-white rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-[#1F3D2B]/20 hover:scale-105 transition-all"
           >
             Get Started

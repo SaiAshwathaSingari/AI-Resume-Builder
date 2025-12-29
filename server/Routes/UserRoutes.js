@@ -2,7 +2,7 @@
 import express from 'express'
 
 import protect from '../middlewares/authMiddleware.js'
-import { getUserById, Login, registerUser } from '../controllers/userController.js';
+import { getUserById, getUserResumes, Login, registerUser } from '../controllers/userController.js';
 
 
 
@@ -14,5 +14,7 @@ userRouter.post('/login',Login);
 
 
 userRouter.get('/data',protect,getUserById);
+
+userRouter.get('/resumes',protect,getUserResumes)
 
 export default userRouter;

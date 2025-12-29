@@ -1,92 +1,187 @@
 import React, { useState } from "react";
-
+import api from "../configs/api.js";
+import { useNavigate } from "react-router-dom";
+import {  useDispatch,useSelector } from "react-redux";
+import { login } from "../redux/features/authSlice.js";
+import toast from "react-hot-toast";
+import { useEffect } from "react";
 export default function Example() {
   const query = new URLSearchParams(window.location.search);
   const urlState = query.get("state");
-  const [state, setState] = useState(urlState || "login");
+
+  // ✅ normalize state (fixes button text issue)
+  const normalizedState =
+    urlState === "login" || urlState === "sign-up"
+      ? urlState
+      : "login";
+
+  const [state, setState] = useState(normalizedState);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // validations
+  const isValidEmail = (em) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+
+  const hasNumber = (str) => /\d/.test(str);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!isValidEmail(email)) {
+      toast.error("Please enter a valid email");
+      return;
+    }
+
+    if (state === "login" && password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    if (state === "sign-up") {
+      if (password.length < 8) {
+        toast.error("Password must be at least 8 characters");
+        return;
+      }
+      if (!hasNumber(password)) {
+        toast.error("Password must include a number");
+        return;
+      }
+    }
+
+    try {
+      if (state === "login") {
+        const res = await api.post("/api/users/login", {
+          email,
+          password,
+        });
+
+        const data = res.data;
+
+        dispatch(
+          login({
+            token: data.token,
+            user: data.user,
+          })
+        );
+
+        localStorage.setItem("token", data.token);
+        toast.success("Login successful");
+        navigate("/app");
+      } else {
+        const res = await api.post("/api/users/register", {
+          name,
+          email,
+          password,
+        });
+
+        const data = res.data;
+
+        // auto-login after signup
+        dispatch(
+          login({
+            token: data.token,
+            user: data.user,
+          })
+        );
+
+        localStorage.setItem("token", data.token);
+        toast.success("Registration successful");
+        navigate("/app");
+      }
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Something went wrong"
+      );
+    }
+  };
+   const { user } = useSelector(state => state.auth);
+ useEffect(() => {
+
+    if (user) {
+      navigate("/app");
+    }
+  }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="bg-white w-full max-w-[360px] mx-4 p-6 py-8 text-sm rounded-xl shadow-lg"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          {state === "login"
-            ? "Login to Your Account"
-            : "Create a New Account"}
-        </h2>
+    <div className="min-h-screen flex items-center justify-center bg-[#F3EFE6] px-4 font-sans">
+      <div className="bg-white w-full max-w-[400px] p-8 rounded-2xl shadow-sm border border-black/5">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h2 className="text-3xl font-bold text-[#1F3D2B]">
+            {state === "login" ? "Welcome Back" : "Create Account"}
+          </h2>
+          <p className="text-[#1F3D2B]/60 text-sm mt-2">
+            {state === "login"
+              ? "Enter your credentials to continue."
+              : "Sign up to get started."}
+          </p>
+        </div>
 
-        {state === "sign-up" && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {state === "sign-up" && (
+            <input
+              type="text"
+              placeholder="Your name"
+              className="w-full border rounded-lg py-3 px-4"
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          )}
+
           <input
-            className="w-full cursor-text border bg-indigo-50 mb-3 border-gray-200 outline-none rounded-md py-2.5 px-3 focus:ring-2 focus:ring-indigo-400"
-            type="text"
-            placeholder="Username"
+            type="email"
+            placeholder="email@example.com"
+            className="w-full border rounded-lg py-3 px-4"
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
-        )}
 
-        <input
-          className="w-full cursor-text border bg-indigo-50 mb-3 border-gray-200 outline-none rounded-md py-2.5 px-3 focus:ring-2 focus:ring-indigo-400"
-          type="email"
-          placeholder="Email"
-          required
-        />
+          <input
+            type="password"
+            placeholder="••••••••"
+            className="w-full border rounded-lg py-3 px-4"
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
-        <input
-          className="w-full cursor-text border bg-indigo-50 mb-6 border-gray-200 outline-none rounded-md py-2.5 px-3 focus:ring-2 focus:ring-indigo-400"
-          type="password"
-          placeholder="Password"
-          required
-        />
+          {state === "sign-up" && (
+            <p className="text-xs text-black/60">
+              Min 8 characters, include at least one number
+            </p>
+          )}
 
-        <button
-          type="submit"
-          className="
-            w-full
-            cursor-pointer
-            mb-4
-            bg-indigo-500
-            text-white
-            py-2.5
-            rounded-md
-            font-medium
-            transition-all
-            duration-200
-            hover:bg-indigo-600
-            hover:shadow-lg
-            active:scale-95
-          "
-        >
-          {state === "login" ? "Login" : "Sign Up"}
-        </button>
+          <button
+            type="submit"
+            className="w-full bg-[#1F3D2B] text-white py-3 rounded-lg font-semibold"
+          >
+            {state === "login" ? "Sign In" : "Sign Up"}
+          </button>
+        </form>
 
-        {state === "sign-up" && (
-          <p className="text-center text-gray-600">
-            Already have an account?{" "}
+        {/* Toggle */}
+        <div className="mt-6 text-center">
+          {state === "login" ? (
             <button
-              type="button"
-              onClick={() => setState("login")}
-              className="cursor-pointer text-indigo-500 font-medium hover:underline"
-            >
-              Log In
-            </button>
-          </p>
-        )}
-
-        {state === "login" && (
-          <p className="text-center text-gray-600">
-            Don’t have an account?{" "}
-            <button
-              type="button"
               onClick={() => setState("sign-up")}
-              className="cursor-pointer text-indigo-500 font-medium hover:underline"
+              className="text-[#1F3D2B] font-bold"
             >
-              Sign Up
+              Create an account
             </button>
-          </p>
-        )}
-      </form>
+          ) : (
+            <button
+              onClick={() => setState("login")}
+              className="text-[#1F3D2B] font-bold"
+            >
+              Log in instead
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

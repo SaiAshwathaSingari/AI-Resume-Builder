@@ -2,6 +2,7 @@ import User from "../models/User.js"
 import bycrpt from "bcrypt";
 
 import jwt from "jsonwebtoken"
+import Resume from "../models/Resume.js";
 
 //Function for token generation
 
@@ -105,5 +106,22 @@ export const getUserById = async(req,res)=>{
     });
   } catch (error) {
     return res.status(400).json({message: "Error"})
+  }
+}
+
+
+//Fuction to get User Resumes by Id
+
+export const getUserResumes = async(req,res)=>{
+
+  
+
+  try {
+    const userId = req.userId;
+    const resumes = await Resume.find({userId});
+
+    return res.status(200).json({resumes})
+  } catch (error) {
+     return res.status(400).json({message: "Error"})
   }
 }
