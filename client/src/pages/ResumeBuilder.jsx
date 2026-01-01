@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { dummyResumeData } from "../assets/assets";
+import { toast } from 'sonner';
+
+ 
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { useRef } from "react";
+
 
 import {
   Briefcase,
@@ -32,38 +35,143 @@ import AccentSelector from "../components/AccentSelector";
 import EducatioinForm from "../components/EducatioinForm";
 import ProjectForm from "../components/ProjectForm";
 import SkillsForm from "../components/SkillsForm";
+import api from "../configs/api.js";
+import { setLoading } from "../redux/features/authSlice.js"; 
+import { useDispatch, useSelector } from "react-redux";
+import { Toaster } from "sonner";
 
 const ResumeBuilder = () => {
+  
+
+  const [isSaving, setIsSaving] = useState(false);
+
+
   const resumeRef = useRef(null);
 
   const { resumeId } = useParams();
+  const token = localStorage.getItem("token");
   const navigate = useNavigate();
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
- 
-  const downloadResume = async () => {
-  const element = resumeRef.current;
-  if (!element) return;
+ //Function to download the resume
+const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+//function to handle share
+const handleShare = async () => {
+  // window.location.origin gets ONLY the protocol + host (e.g., http://localhost:3000)
+  // We then manually add /preview/ and the ID
+  const shareUrl = `${window.location.origin}/view/${resumeId}`;
 
-  const canvas = await html2canvas(element, {
-    scale: 2,          // higher = sharper PDF
-    useCORS: true,
-  });
-
-  const imgData = canvas.toDataURL("image/png");
-
-  const pdf = new jsPDF("p", "pt", "a4");
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight =
-    (canvas.height * pdfWidth) / canvas.width;
-
-  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-  pdf.save("resume.pdf");
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success("Preview link copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy:", err);
+    toast.error("Could not copy link.");
+  }
 };
 
 
+const downloadResume = () => {
+  const content = resumeRef.current;
+  if (!content) return;
 
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+
+  const pri = iframe.contentWindow;
+  
+  const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map(style => style.outerHTML)
+    .join('');
+
+  pri.document.open();
+  pri.document.write(`
+    <html>
+      <head>
+        <title>Professional Resume</title>
+        ${styles}
+        <style>
+          /* 1. Define the physical paper size */
+          @page { 
+            size: A4; 
+            margin: 0; 
+          }
+          
+          /* 2. Reset Body for printing */
+          body { 
+            margin: 0; 
+            padding: 0;
+            background: #ffffff;
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+          }
+
+          /* 3. The Paper Container */
+          #print-root { 
+            width: 210mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important;
+          }
+
+          /* 4. Professional Cut Logic: Prevent Splitting Items */
+          /* Apply these classes to your ResumePreview sub-components */
+          .experience-item, 
+          .education-item, 
+          .project-item,
+          .skills-group,
+          header {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            display: block; /* Ensures break rules apply */
+            position: relative;
+          }
+
+          /* 5. Heading Protection */
+          h1, h2, h3 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+
+          /* 6. Clean Typography for PDF */
+          * {
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="print-root">
+          ${content.innerHTML}
+        </div>
+      </body>
+    </html>
+  `);
+  pri.document.close();
+
+  // Give enough time for images (profile pic) to load in the iframe
+  setTimeout(() => {
+    pri.focus();
+    pri.print();
+    document.body.removeChild(iframe);
+  }, 700);
+};
+
+
+const loadExisistingData = async()=>{
+    try {
+      const {data} = await api.get(`/api/resumes/get/${resumeId}`,{
+        headers: {Authorization:token}
+      })
+      if(data.resume){
+        setResumeData(data.resume);
+        
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
   const sections = [
     { id: "personal", name: "Personal Info", icon: User },
     { id: "summary", name: "Summary", icon: FileText },
@@ -84,16 +192,72 @@ const ResumeBuilder = () => {
   });
 
   useEffect(() => {
-    const resume = dummyResumeData.find((r) => r._id === resumeId);
-    if (resume) setResumeData((prev) => ({ ...prev, ...resume }));
+    loadExisistingData();
   }, [resumeId]);
 
-  const handlePublicToggle = () => {
+ const handlePublicToggle = async () => {
+  // Determine the new state first
+  const newPublicStatus = !resumeData.public;
+
+  try {
+    // 1. Prepare data for the API
+    const formData = new FormData();
+    formData.append("resumeId", resumeId);
+    formData.append("resumeData", JSON.stringify({ public: newPublicStatus }));
+
+    // 2. Make the API request
+    const { data } = await api.put('/api/resumes/update', formData, {
+      headers: { Authorization: token }
+    });
+    console.log(data)
+    // 3. Update local state with the new status
     setResumeData((prev) => ({
       ...prev,
-      public: !prev.public
+      public: newPublicStatus
     }));
-  };
+
+    // Optional: Add a success message
+    toast.success(`Resume is now ${newPublicStatus ? 'Public' : 'Private'}`);
+    
+  } catch (error) {
+    console.error("Toggle failed:", error);
+    toast.error("Failed to update visibility settings.");
+  }
+};
+
+
+ 
+ 
+  //Function to save
+  const dispatch = useDispatch();
+  const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    let updatedResumeData = structuredClone(resumeData);
+
+    if (typeof resumeData.personal_info.image === "object") {
+      delete updatedResumeData.personal_info.image;
+    }
+
+    const formData = new FormData();
+    formData.append("resumeId", resumeId);
+    formData.append("resumeData", JSON.stringify(updatedResumeData));
+
+    resumeData.removeBackground && formData.append("removeBackground", "yes");
+    typeof resumeData.personal_info.image === "object" &&
+      formData.append("image", resumeData.personal_info.image);
+
+    const { data } = await api.put("/api/resumes/update", formData, {
+      headers: { Authorization: token },
+    });
+    toast.success(data.message)
+    setResumeData(data.resume);
+  } catch (err) {
+    console.log(err);
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const renderActiveForm = () => {
     const active = sections[activeSectionIndex].id;
@@ -110,42 +274,74 @@ const ResumeBuilder = () => {
     <div className="min-h-screen bg-[#FDFCF9] flex flex-col">
       
       {/* --- TOP NAVIGATION --- */}
-      <nav className="sticky top-0 z-[100] bg-white border-b border-black/10 px-8 h-20 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-6">
-          <button onClick={() => navigate("/app")} className="p-2 hover:bg-[#F3EFE6] rounded-full transition-colors">
-            <MoveLeftIcon className="w-5 h-5 text-[#1F3D2B]" />
-          </button>
-          <div className="h-6 w-[1px] bg-black/10" />
-          <h2 className="font-serif text-xl font-semibold text-[#1F3D2B]">Resume Editor</h2>
-        </div>
+     <nav className="sticky top-0 z-[100] bg-white border-b border-black/10 px-8 h-20 flex items-center justify-between shadow-sm">
+  {/* LEFT: Back button and Title */}
+  <div className="flex items-center gap-6">
+    <button onClick={() => navigate("/app")} className="p-2 hover:bg-[#F3EFE6] rounded-full transition-colors">
+      <MoveLeftIcon className="w-5 h-5 text-[#1F3D2B]" />
+    </button>
+    <div className="h-6 w-[1px] bg-black/10" />
+    <h2 className="font-serif text-xl font-semibold text-[#1F3D2B]">Resume Editor</h2>
+  </div>
 
-        <div className="hidden lg:flex items-center gap-1 bg-[#F3EFE6] p-1 rounded-xl border border-black/5">
-          {sections.map((section, idx) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveSectionIndex(idx)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
-                activeSectionIndex === idx ? "bg-white text-[#1F3D2B] shadow-sm" : "text-[#1F3D2B]/40 hover:text-[#1F3D2B]/70"
-              }`}
-            >
-              {section.name}
-            </button>
-          ))}
-        </div>
+  {/* CENTER: Navigation Tabs (Hidden on small screens) */}
+  <div className="hidden lg:flex items-center gap-1 bg-[#F3EFE6] p-1 rounded-xl border border-black/5">
+    {sections.map((section, idx) => (
+      <button
+        key={section.id}
+        onClick={() => setActiveSectionIndex(idx)}
+        className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+          activeSectionIndex === idx ? "bg-white text-[#1F3D2B] shadow-sm" : "text-[#1F3D2B]/40 hover:text-[#1F3D2B]/70"
+        }`}
+      >
+        {section.name}
+      </button>
+    ))}
+  </div>
 
-        <button
-          onClick={() => setIsToolbarOpen(!isToolbarOpen)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all border ${
-            isToolbarOpen ? "bg-[#1F3D2B] text-white border-[#1F3D2B]" : "bg-white border-black/10 text-[#1F3D2B] hover:bg-[#F3EFE6]"
-          }`}
-        >
-          <Settings2 size={18} />
-          Design Settings
-          <ChevronDown size={16} className={`transition-transform duration-300 ${isToolbarOpen ? "rotate-180" : ""}`} />
-        </button>
-      </nav>
+  {/* RIGHT: Action Buttons */}
+  <div className="flex items-center gap-4">
+    {/* THE SAVE BUTTON - PLACED HERE */}
 
+
+<button
+  onClick={handleSave}
+  disabled={isSaving}
+  className="flex items-center gap-2 px-6 py-2.5 bg-[#1F3D2B] text-white rounded-full text-xs font-bold uppercase tracking-widest
+             hover:bg-[#173023] transition-all shadow-md active:scale-95
+             disabled:opacity-60 disabled:cursor-not-allowed"
+>
+  {isSaving ? (
+    <>
+      {/* Spinner */}
+      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+      <span>Saving...</span>
+    </>
+  ) : (
+    "Save Changes"
+  )}
+</button>
+
+
+
+    <button
+      onClick={() => setIsToolbarOpen(!isToolbarOpen)}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-xs transition-all border ${
+        isToolbarOpen ? "bg-[#1F3D2B] text-white border-[#1F3D2B]" : "bg-white border-black/10 text-[#1F3D2B] hover:bg-[#F3EFE6]"
+      }`}
+    >
+      <Settings2 size={16} />
+      Design
+      <ChevronDown size={14} className={`transition-transform duration-300 ${isToolbarOpen ? "rotate-180" : ""}`} />
+    </button>
+  </div>
+</nav>
+        
+
+        
       {/* --- DESIGN PANEL --- */}
+          
+
       <div className={`z-[90] bg-white border-b border-black/10 shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isToolbarOpen ? "max-h-[500px] opacity-100 overflow-visible" : "max-h-0 opacity-0 overflow-hidden"}`}>
         <div className="max-w-7xl mx-auto p-8 grid grid-cols-2 gap-12">
           <div className="space-y-4">
@@ -167,6 +363,8 @@ const ResumeBuilder = () => {
       <main className="flex-1 flex flex-col lg:flex-row gap-12 p-8 lg:p-16 max-w-[1800px] mx-auto w-full">
         
         {/* FORM SECTION */}
+
+        
         <section className="flex-1 space-y-8 animate-in fade-in duration-700">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1F3D2B]/10 text-[#1F3D2B] text-[10px] font-bold uppercase tracking-widest mb-4">
@@ -198,10 +396,15 @@ const ResumeBuilder = () => {
               >
                 {resumeData.public ? <><EyeIcon size={14} /> Public</> : <><EyeClosedIcon size={14} /> Private</>}
               </button>
+              {resumeData.public && 
+                <button 
+                onClick={handleShare}
+                className="flex items-center gap-2 px-4 py-3 bg-[#F3EFE6] text-[#1F3D2B] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#1F3D2B]/5 transition-all">
               
-              <button className="flex items-center gap-2 px-4 py-3 bg-[#F3EFE6] text-[#1F3D2B] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-[#1F3D2B]/5 transition-all">
                 <Share2 size={14} /> Share
               </button>
+              }
+              
             </div>
 
             <button onClick={downloadResume} className="flex items-center gap-3 px-8 py-3 bg-[#1F3D2B] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:shadow-2xl hover:shadow-[#1F3D2B]/20 transition-all active:scale-95">
@@ -228,6 +431,7 @@ const ResumeBuilder = () => {
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#1F3D2B]/40">Live Sync</span>
               </div>
             </div>
+          
           </div>
         </section>
       </main>

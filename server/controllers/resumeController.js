@@ -2,17 +2,28 @@ import imagekit from "../lib/imagekit.js";
 import Resume from "../models/Resume.js";
 import fs from 'fs';
 //Function to create Resume
-export const createResume = async(req,res)=>{
-    try {
-      const userId = req.userId;
-      const {title} = req.body;
-      const newResume = await Resume.create({userId,title})
-      return res.status(201).json({newResume});
+export const createResume = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { title } = req.body;
 
-    } catch (error) {
-      return res.status(400).json({message: "Error"})
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
-}
+
+    if (!title) {
+      return res.status(400).json({ message: "Title is required" });
+    }
+
+    const newResume = await Resume.create({ userId, title });
+
+    return res.status(201).json({ resume: newResume });
+  } catch (error) {
+    console.error("CREATE RESUME ERROR:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 
 
 //Function to Delete Resume
@@ -37,16 +48,15 @@ export const getResumeById = async (req, res) => {
     const userId = req.userId;
     const { resumeId } = req.params;
 
-    const resume = await Resume.findOne({
-      _id: resumeId,
-      userId,
-    }).select("-__v -createdAt -updatedAt");
+    const resume = await Resume.findById(resumeId);
+
 
     if (!resume) {
       return res.status(404).json({ message: "Resume not found" });
     }
 
-    return res.status(200).json(resume);
+    return res.status(200).json({ resume });
+
   } catch (error) {
     return res.status(400).json({ message: "Error fetching resume" });
   }
@@ -56,16 +66,26 @@ export const getResumeById = async (req, res) => {
 
 // get resume by id public
 
-export const getPublicResumeById = async(req,res)=>{
+// --- Inside resumeController.js ---
+export const getPublicResumeById = async (req, res) => {
   try {
-    const {resumeId}  = req.params;
-    const resume = await Resume.findOne({public:true,_id:resumeId});
+    const { resumeId } = req.params;
+    const resume = await Resume.findById(resumeId);
 
-    return res.status(200).josn({resume});
+    if (!resume) {
+      return res.status(404).json({ message: "Resume not found" });
+    }
+
+    // THIS IS LIKELY THE PROBLEM:
+    if (resume.public === false) {
+      return res.status(400).json({ message: "This resume is private" });
+    }
+
+    res.status(200).json({ resume });
   } catch (error) {
-    return res.status(400).json({message:"Error"})
+    res.status(500).json({ message: error.message });
   }
-}
+};
 
 // function for updating resume
 
@@ -75,7 +95,12 @@ export const updateResume = async (req, res) => {
     const { resumeId, resumeData, removeBackground } = req.body;
     const image = req.file;
 
-    let resumeDataCopy = JSON.parse(resumeData);
+    let resumeDataCopy;
+    if(typeof resumeData === 'string'){
+      resumeDataCopy = await JSON.parse(resumeData)
+    }else{
+      resumeDataCopy = structuredClone(resumeData)
+    }
 
     if (image) {
       const imageBufferData = fs.createReadStream(image.path);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles, ShieldCheck, Zap, MousePointerClick } from 'lucide-react';
 import { useSelector } from 'react-redux';
@@ -6,6 +6,13 @@ import { useSelector } from 'react-redux';
 const Home = () => {
   const navigate = useNavigate();
   const {user} = useSelector(state=>state.auth);
+  
+  useEffect(()=>{
+      if(user){
+    navigate("/app");
+  }
+  },[])
+
   return (
     <div className="min-h-screen bg-[#F3EFE6] text-[#1F3D2B] selection:bg-[#1F3D2B] selection:text-white">
       

@@ -1,8 +1,12 @@
 import React from "react";
-import { dummyResumeData } from "../assets/assets";
+
 import { Trash2, Edit, X, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import api from '../configs/api.js'
+import { useSelector } from "react-redux";
+import pdfToText from 'react-pdftotext'
+import { toFormData } from "axios";
+import toast from 'react-hot-toast';
 const Dashboard = () => {
   const [allResumes, setAllResumes] = React.useState([]);
   const [isCreateResume, setIsCreateResume] = React.useState(false);
@@ -19,46 +23,124 @@ const Dashboard = () => {
 
   const [editResume, setEditResume] = React.useState(null);
   
+  
+
+  const getAllResumes = async()=>{
+    try {
+      const {data} = await api.get('api/users/resumes',{headers: {Authorization: token}});
+      setAllResumes(data.resumes);
+    } catch (error) {
+      console.log(error)
+    }
+  }
+  const {token} = useSelector(state=>state.auth)
+  
   React.useEffect(() => {
-    setAllResumes(dummyResumeData);
+    getAllResumes();
   }, []);
 
-  const handleCreateResume = (e) => {
-    e.preventDefault();
+  
+  // Function to create Resume frontend
+  const handleCreateResume = async (e) => {
+  e.preventDefault();
+  const title = resumeTitle;
+  try {
+    const { data } = await api.post(
+      "/api/resumes/create",
+      { title },
+      {
+        headers: {
+          Authorization: token,
+        },
+      }
+    );
 
-    // later you’ll replace 123 with real ID
-    navigate("/app/builder/123");
-
+    setAllResumes([...allResumes, data.resume]);
     setResumeTitle("");
     setIsCreateResume(false);
-  };
 
-  const handleUploadResume = (e) => {
+    navigate(`/app/builder/${data.resume._id}`);
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+  //Function to handle upload resume frontend
+  const handleUploadResume = async(e) => {
     e.preventDefault();
-    navigate("/app/builder/123");
+   try {
+    const resumeText = await pdfToText(uploadedFile)
+    console.log("EXTRACTED TEXT:", resumeText);
+console.log("TEXT LENGTH:", resumeText?.length);
+
+   const { data } = await api.post(
+  "/api/ai/upload-resume",
+  {
+    resumeContent: resumeText,
+    title: resumeTitle,
+  },
+  {
+    headers: { Authorization: token },
+  }
+);
+
+    setResumeTitle('')
+    setIsUploadResume(null)
+    navigate(`/app/builder/${data.resumeId}`)
+   } catch (error) {
+  console.log("UPLOAD ERROR 👉", error.response?.data);
+  toast.error(error.response?.data?.message || "Upload failed");
+}
+
     setResumeTitle("");
     setIsUploadResume(false);
   }
-  const handleEditResume = (e,title) => {
+
+  //Function to edit resume
+
+  const handleEditResume = async(e,title) => {
     e.preventDefault();
     // logic to edit resume title
-    setEditPopup(false);
-    allResumes.forEach((resume)=>{
+    try {
+      const {data} = await api.put('api/resumes/update',{
+        resumeId: editResume._id,
+        resumeData: {title}
+      }, {headers: {Authorization: token}})
+      allResumes.forEach((resume)=>{
       if(resume._id===editResume._id){
         resume.title=title;
       } 
+      setAllResumes([...allResumes]);
+      
   });
-  setAllResumes([...allResumes]);
+  
+    } catch (error) {
+      console.log(error)
+    }
+    setEditPopup(false);
+    
   }
-
-  const handleDeleteResume = (resume) => {
-    // logic to delete resume
+// Function to delete resume
+  const handleDeleteResume = async(resume) => {
+    
    
     const ok = window.confirm("Are you sure you want to delete this resume?");
     if (!ok) return;
-
-    const filteredResumes = allResumes.filter((resume1) => resume1._id !== resume._id);
+    try {
+      const {data} = await api.delete(`api/resumes/delete/${resume._id}`,
+        {
+    headers: { Authorization: token },
+    }
+      )
+     if(data.message=="Deletion Successfull!"){
+        const filteredResumes = allResumes.filter((resume1) => resume1._id !== resume._id);
     setAllResumes(filteredResumes);
+     } 
+    } catch (error) {
+      console.log(error)
+    }
+
+    
   }
 
   return (
