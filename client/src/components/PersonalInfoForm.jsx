@@ -2,12 +2,13 @@ import {
   Briefcase,
   Globe,
   Linkedin,
-  MapPin, // Fixed: Changed from LocationEditIcon
+  MapPin,
   Mail,
   Phone,
   User,
   Camera,
-  Sparkles, // Fixed: Added missing import
+  Sparkles,
+  Wand2,
 } from "lucide-react";
 import React from "react";
 
@@ -19,7 +20,6 @@ function PersonalInfoForm({ data, onChange }) {
     });
   };
 
-  // Helper to safely handle image preview
   const getImagePreview = () => {
     if (!data.image) return null;
     if (typeof data.image === "string") return data.image;
@@ -40,7 +40,7 @@ function PersonalInfoForm({ data, onChange }) {
     { key: "website", label: "Portfolio/Website", icon: Globe, type: "url" },
   ];
 
-  const inputStyles = "w-full rounded-xl border border-black/10 bg-white px-5 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#1F3D2B]/20 focus:border-[#1F3D2B] placeholder:text-black/20";
+  const inputStyles = "w-full rounded-xl border border-black/10 bg-white px-5 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#1F3D2B]/20 focus:border-[#1F3D2B] placeholder:text-black/20 text-[#1F3D2B]";
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
@@ -52,12 +52,12 @@ function PersonalInfoForm({ data, onChange }) {
         </h2>
       </div>
 
-      <div className="p-8 bg-[#F3EFE6] border border-black/10 rounded-[32px] space-y-8">
+      <div className="p-8 bg-[#F3EFE6] border border-black/10 rounded-[40px] space-y-10">
         
-        {/* --- PHOTO UPLOAD --- */}
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <label className="group relative cursor-pointer">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-dashed border-[#1F3D2B]/20 group-hover:border-[#1F3D2B]/40 transition-all flex items-center justify-center bg-white shadow-sm">
+        {/* --- PHOTO UPLOAD AREA --- */}
+        <div className="flex flex-col items-center justify-center">
+          <label className="group relative cursor-pointer block">
+            <div className="w-36 h-36 rounded-full overflow-hidden border-4 border-white group-hover:border-[#1F3D2B]/20 transition-all flex items-center justify-center bg-white shadow-xl">
               {data.image ? (
                 <img
                   src={getImagePreview()}
@@ -65,14 +65,14 @@ function PersonalInfoForm({ data, onChange }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="flex flex-col items-center text-[#1F3D2B]/30">
-                  <Camera size={24} />
+                <div className="flex flex-col items-center text-[#1F3D2B]/20">
+                  <Camera size={40} strokeWidth={1.5} />
                 </div>
               )}
             </div>
             
-            <div className="absolute bottom-0 right-0 p-2 bg-[#1F3D2B] text-white rounded-full shadow-lg scale-90 group-hover:scale-100 transition-transform">
-              <Camera size={14} />
+            <div className="absolute bottom-1 right-1 p-3 bg-[#1F3D2B] text-white rounded-full shadow-lg scale-100 group-hover:scale-110 transition-transform border-4 border-[#F3EFE6]">
+              <Camera size={16} />
             </div>
 
             <input
@@ -82,18 +82,44 @@ function PersonalInfoForm({ data, onChange }) {
               onChange={(e) => handleChange("image", e.target.files[0])}
             />
           </label>
-          <div className="text-center">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#1F3D2B]/40">Profile Photo</p>
+        </div>
+
+        {/* --- BIG AI SLIDER (ALWAYS VISIBLE) --- */}
+        <div className="max-w-xs mx-auto w-full">
+          <div 
+            onClick={() => handleChange("removeBg", !data.removeBg)}
+            className="group cursor-pointer relative flex items-center justify-between p-4 bg-white rounded-[24px] border border-black/5 shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl transition-colors ${data.removeBg ? 'bg-[#1F3D2B] text-white' : 'bg-[#1F3D2B]/5 text-[#1F3D2B]'}`}>
+                <Wand2 size={18} className={data.removeBg ? 'animate-pulse' : ''} />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-black uppercase tracking-widest text-[#1F3D2B]">AI Remover</span>
+                <span className="text-[9px] font-bold text-black/30 uppercase">{data.removeBg ? 'Active' : 'Disabled'}</span>
+              </div>
+            </div>
+
+            {/* THE ACTUAL SLIDE SWITCH */}
+            <div className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${data.removeBg ? 'bg-[#1F3D2B]' : 'bg-black/10'}`}>
+              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all duration-300 shadow-md ${data.removeBg ? 'left-8' : 'left-1'}`} />
+            </div>
           </div>
+          
+          {!data.image && (
+            <p className="text-center mt-3 text-[9px] font-bold text-[#1F3D2B]/30 uppercase tracking-tighter">
+              Upload a photo to see the magic
+            </p>
+          )}
         </div>
 
         {/* --- FORM FIELDS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
           {fields.map((field) => {
             const Icon = field.icon;
             return (
               <div key={field.key} className={field.key === "full_name" || field.key === "profession" ? "md:col-span-2" : ""}>
-                <label className="flex items-center gap-2 text-[10px] font-bold uppercase text-[#1F3D2B]/60 ml-1 mb-2">
+                <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.1em] text-[#1F3D2B]/50 ml-1 mb-2">
                   <Icon size={12} /> {field.label}
                   {field.required && <span className="text-red-400">*</span>}
                 </label>
@@ -109,23 +135,6 @@ function PersonalInfoForm({ data, onChange }) {
           })}
         </div>
 
-        {/* --- AI BACKGROUND REMOVER SECTION --- */}
-        {data.image && (
-          <div className="flex items-center justify-between px-6 py-4 rounded-2xl bg-white/50 border border-black/5 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#1F3D2B]/10 flex items-center justify-center text-[#1F3D2B]">
-                <Sparkles size={14} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-[#1F3D2B] uppercase tracking-tighter">AI Background Remover</p>
-                <p className="text-[10px] text-black/40">Coming Soon</p>
-              </div>
-            </div>
-            <div className="w-10 h-5 bg-black/10 rounded-full relative">
-               <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm" />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

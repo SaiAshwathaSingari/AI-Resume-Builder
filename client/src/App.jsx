@@ -10,7 +10,7 @@ import NotFound from './pages/NotFound';
 import api from './configs/api.js';
 import { useDispatch } from 'react-redux';
 import {login,setLoading} from './redux/features/authSlice.js'
-import {Toaster} from 'react-hot-toast'
+import {Toaster} from 'sonner'
 
 const App = () => {
     const dispatch = useDispatch();

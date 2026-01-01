@@ -6,7 +6,7 @@ const protect = async(req,res,next)=>{
   const token = req.headers.authorization;
 
   if(!token){
-    return res.satus(401).json({message: "Unauthorized"})
+    return res.status(401).json({message: "Unauthorized"})
 
 
   }
@@ -15,7 +15,7 @@ const protect = async(req,res,next)=>{
     req.userId = decoded.userId
     next();
   } catch (error) {
-    return res.satus(404).json({message: "Error"})
+    return res.status(404).json({message: "Error"})
   }
 }
 
