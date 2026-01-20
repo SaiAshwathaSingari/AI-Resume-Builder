@@ -31,7 +31,7 @@ export default function Example() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    console.log("Button clicked");
     if (!isValidEmail(email)) {
       toast.error("Please enter a valid email");
       return;
